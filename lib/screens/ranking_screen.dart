@@ -44,12 +44,96 @@ class RankingScreen extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Contagem de usuários que faltam finalizar a votação
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('rooms')
+                .doc(roomId)
+                .collection('players')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+
+              final players = snapshot.data!.docs;
+              final totalPlayers = players.length;
+              final waitingPlayers = players
+                  .where((player) => player['status'] == 'waiting ranking')
+                  .length;
+              final remainingPlayers = totalPlayers - waitingPlayers;
+
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                child: NeuContainer(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      remainingPlayers == 0
+                          ? 'Todos os jogadores votaram!'
+                          : 'Faltam $remainingPlayers jogadores!',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Lista horizontal de usuários aguardando
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('rooms')
+                .doc(roomId)
+                .collection('players')
+                .where('status', isEqualTo: 'waiting ranking')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+
+              final players = snapshot.data!.docs;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                height: 100,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  scrollDirection: Axis.horizontal,
+                  itemCount: players.length,
+                  itemBuilder: (context, index) {
+                    final player = players[index];
+                    final photoUrl = player['photoUrl'] ?? '';
+
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundImage: photoUrl.isNotEmpty
+                            ? NetworkImage(photoUrl)
+                            : const AssetImage('assets/default_avatar.png')
+                                as ImageProvider,
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('rooms')
                   .doc(roomId)
-                  .collection('votes')
+                  .collection('suggestions')
+                  .orderBy('votes', descending: true) // Ordena por votos
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
@@ -59,104 +143,192 @@ class RankingScreen extends StatelessWidget {
                     ),
                   );
                 }
-                final votes = snapshot.data!.docs;
-                final voteCounts = <String, int>{};
 
-                // Soma os pesos dos votos para cada lugar
-                for (final vote in votes) {
-                  final place = vote['place'];
-                  final weight = vote['weight'] ?? 1;
-                  voteCounts[place] =
-                      (voteCounts[place] ?? 0) + (weight as int);
+                final suggestions = snapshot.data!.docs;
+
+                if (suggestions.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Nenhuma sugestão encontrada.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  );
                 }
 
-                // Ordena os lugares por número de votos
-                final sortedPlaces = voteCounts.entries.toList()
-                  ..sort((a, b) => b.value.compareTo(a.value));
+                return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    // Pódio (1º, 2º e 3º lugares)
+                    const Text(
+                      'Pódio',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    // 1º lugar
+                    if (suggestions.isNotEmpty)
+                      _buildPodiumItem(
+                        context,
+                        suggestions[0],
+                        position: 1,
+                        color: Colors.amber,
+                      ),
+                    // 2º lugar
+                    if (suggestions.length > 1)
+                      _buildPodiumItem(
+                        context,
+                        suggestions[1],
+                        position: 2,
+                        color: Colors.grey,
+                      ),
+                    // 3º lugar
+                    if (suggestions.length > 2)
+                      _buildPodiumItem(
+                        context,
+                        suggestions[2],
+                        position: 3,
+                        color: Colors.brown,
+                      ),
+                    const SizedBox(height: 20),
+                    // Restante das sugestões
+                    const Text(
+                      'Outras Sugestões',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ...suggestions.sublist(3).map((suggestion) {
+                      return _buildSuggestionItem(suggestion, suggestions);
+                    }).toList(),
+                  ],
+                );
+              },
+            ),
+          ),
+          // Botão para encerrar a sala (só aparece quando todos estão aguardando)
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('rooms')
+                .doc(roomId)
+                .collection('players')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: sortedPlaces.length,
-                  itemBuilder: (context, index) {
-                    final entry = sortedPlaces[index];
-                    final place = entry.key;
-                    final votes = entry.value;
+              final players = snapshot.data!.docs;
+              final allWaiting = players
+                  .every((player) => player['status'] == 'waiting ranking');
 
-                    // Ícones para os três primeiros colocados
-                    IconData? icon;
-                    Color? iconColor;
-                    if (index == 0) {
-                      icon = Icons.emoji_events; // Medalha de ouro
-                      iconColor = Colors.amber;
-                    } else if (index == 1) {
-                      icon = Icons.emoji_events; // Medalha de prata
-                      iconColor = Colors.grey;
-                    } else if (index == 2) {
-                      icon = Icons.emoji_events; // Medalha de bronze
-                      iconColor = Colors.brown;
-                    }
-
-                    return NeuContainer(
-                      borderColor: Colors.black,
-                      shadowColor: Colors.black,
-                      color: Colors.white,
-                      child: ListTile(
-                        leading: icon != null
-                            ? Icon(
-                                icon,
-                                color: iconColor,
-                                size: 30,
-                              )
-                            : Text(
-                                '${index + 1}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                        title: Text(
-                          place,
-                          style: const TextStyle(
+              return allWaiting
+                  ? Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: NeuTextButton(
+                        onPressed: () => _endRoomAndNavigateHome(context),
+                        text: const Text(
+                          'Encerrar Sala',
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
-                        trailing: Text(
-                          'Pontos: $votes',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        buttonColor: Colors.greenAccent,
+                        borderColor: Colors.black,
+                        shadowColor: Colors.black,
+                        enableAnimation: true,
                       ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          // Botão para encerrar a sala e voltar para a tela inicial
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: NeuTextButton(
-              onPressed: () => _endRoomAndNavigateHome(context),
-              text: const Text(
-                'Encerrar Sala',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              buttonColor: Colors.white,
-              borderColor: Colors.black,
-              shadowColor: Colors.black,
-              enableAnimation: true,
-            ),
+                    )
+                  : const SizedBox.shrink();
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  // Widget para exibir um item do pódio
+  Widget _buildPodiumItem(
+    BuildContext context,
+    QueryDocumentSnapshot suggestion, {
+    required int position,
+    required Color color,
+  }) {
+    return NeuContainer(
+      borderColor: Colors.black,
+      shadowColor: Colors.black,
+      color: Colors.white,
+      child: ListTile(
+        leading: Icon(
+          Icons.emoji_events,
+          color: color,
+          size: 30,
+        ),
+        title: Text(
+          suggestion['place'],
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        trailing: Text(
+          'Pontos: ${suggestion['votes']}',
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget para exibir uma sugestão comum
+  Widget _buildSuggestionItem(
+    QueryDocumentSnapshot suggestion,
+    List<QueryDocumentSnapshot> suggestions,
+  ) {
+    return NeuContainer(
+      borderColor: Colors.black,
+      shadowColor: Colors.black,
+      color: Colors.white,
+      child: ListTile(
+        leading: Text(
+          '${suggestions.indexOf(suggestion) + 1}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        title: Text(
+          suggestion['place'],
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        trailing: Text(
+          'Pontos: ${suggestion['votes']}',
+          style: const TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+          ),
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:neubrutalism_ui/neubrutalism_ui.dart'; // Certifique-se de adicionar este pacote
 import 'suggestion_screen.dart';
 
@@ -90,10 +91,25 @@ class WaitingRoomScreenState extends State<WaitingRoomScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const Text(
+            'Sala de Espera',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
         body: Center(
-          child: CircularProgressIndicator(
+          child: LoadingAnimationWidget.staggeredDotsWave(
             color: Colors.black,
+            size: 80,
           ),
         ),
       );

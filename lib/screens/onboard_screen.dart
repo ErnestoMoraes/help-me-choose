@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:help_me_choose/shared_preference/onboard_sp.dart';
 import 'package:neubrutalism_ui/neubrutalism_ui.dart';
 import 'login_screen.dart';
 
@@ -31,7 +32,7 @@ class OnboardingScreenState extends State<OnboardingScreen> {
             'Veja em tempo real qual restaurante foi o mais votado pelo grupo.'),
   ];
 
-  void _nextPage() {
+  void _nextPage() async {
     if (_currentPage < _onboardingItems.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -39,6 +40,7 @@ class OnboardingScreenState extends State<OnboardingScreen> {
       );
       setState(() => _currentPage++);
     } else {
+      await OnboardingManager.setOnboardingShown();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginScreen()),

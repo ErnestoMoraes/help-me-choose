@@ -36,6 +36,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
           .add({
         'user': user.email,
         'place': _controller.text,
+        'votes': 0,
       });
       _controller.clear();
     }
@@ -45,12 +46,10 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Atualiza o estado da sala para "votação"
     await _firestore.collection('rooms').doc(widget.roomId).update({
-      'status': 'votação',
+      'status': 'votation',
     });
 
-    // Navega para a tela de votação
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -105,9 +104,12 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                   onPressed: addSuggestion,
                   borderColor: Colors.black,
                   shadowColor: Colors.black,
-                  buttonColor: Colors.white,
+                  buttonColor: Colors.greenAccent,
                   enableAnimation: true,
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(
+                    Icons.add,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),

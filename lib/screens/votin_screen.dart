@@ -20,6 +20,25 @@ class VotingScreenState extends State<VotingScreen> {
   final List<String> _userVotes = []; // Itens votados pelo usuário (em ordem)
   int _remainingVotes = 3; // Votos restantes do usuário
 
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    changeStatusUser('votando');
+  }
+
+  void changeStatusUser(String status) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore
+        .collection('rooms')
+        .doc(widget.roomId)
+        .collection('players')
+        .doc(user.uid)
+        .update({'status': status});
+  }
+
   void vote(String place) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -63,6 +82,46 @@ class VotingScreenState extends State<VotingScreen> {
     final user = _auth.currentUser;
     if (user == null) return;
 
+    // Atualiza os votos no Firestore
+    final batch = _firestore.batch(); // Usa um batch para atualizações em lote
+
+    for (final entry in _votes.entries) {
+      final place = entry.key;
+      final weight = entry.value;
+
+      // Referência ao documento da sugestão
+      final suggestionRef = _firestore
+          .collection('rooms')
+          .doc(widget.roomId)
+          .collection('suggestions')
+          .where('place', isEqualTo: place)
+          .limit(1);
+
+      // Obtém o documento da sugestão
+      final suggestionSnapshot = await suggestionRef.get();
+
+      if (suggestionSnapshot.docs.isNotEmpty) {
+        final suggestionDoc = suggestionSnapshot.docs.first;
+        final currentVotes = suggestionDoc['votes'] ?? 0;
+
+        // Atualiza o campo `votes` com o valor atual + o peso do voto
+        batch.update(suggestionDoc.reference, {
+          'votes': currentVotes + weight,
+        });
+      }
+    }
+
+    // Executa o batch
+    await batch.commit();
+
+    // Atualiza o status do usuário para "aguardando"
+    await _firestore
+        .collection('rooms')
+        .doc(widget.roomId)
+        .collection('players')
+        .doc(user.uid)
+        .update({'status': 'waiting ranking'});
+
     // Atualiza o estado da sala para "ranking"
     await _firestore.collection('rooms').doc(widget.roomId).update({
       'status': 'ranking',
@@ -99,19 +158,23 @@ class VotingScreenState extends State<VotingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Exibe os votos restantes
-            Text(
-              'Votos restantes: $_remainingVotes',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            NeuContainer(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Votos restantes: $_remainingVotes',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
 
-            // Lista de sugestões
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _firestore
@@ -121,16 +184,20 @@ class VotingScreenState extends State<VotingScreen> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return Center(
+                    return const Center(
                       child: CircularProgressIndicator(
                         color: Colors.black,
                       ),
                     );
                   }
+                  // ordena as sugestões por nome
                   final suggestions = snapshot.data!.docs;
+
+                  suggestions.sort((a, b) => a['place'].compareTo(b['place']));
+
                   return Wrap(
-                    spacing: 10, // Espaço horizontal entre os itens
-                    runSpacing: 10, // Espaço vertical entre as linhas
+                    spacing: 10,
+                    runSpacing: 10,
                     children: suggestions.map((suggestion) {
                       final place = suggestion['place'];
                       final isVoted = _userVotes.contains(place);
@@ -138,9 +205,9 @@ class VotingScreenState extends State<VotingScreen> {
 
                       return NeuContainer(
                         width: MediaQuery.of(context).size.width / 2 - 30,
-                        borderColor: isVoted ? Colors.white : Colors.black,
+                        borderColor: Colors.black,
                         shadowColor: Colors.black,
-                        color: isVoted ? Colors.black : Colors.white,
+                        color: isVoted ? Colors.grey[100] : Colors.white,
                         child: InkWell(
                           onTap: () => vote(place),
                           child: Padding(
@@ -161,11 +228,10 @@ class VotingScreenState extends State<VotingScreen> {
                                 const SizedBox(width: 10),
                                 Text(
                                   place,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        isVoted ? Colors.white : Colors.black,
+                                    color: Colors.black,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
