@@ -16,20 +16,23 @@ class OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<OnboardingItem> _onboardingItems = [
     OnboardingItem(
-        image: 'assets/onboard/onboard1.jpg',
-        title: 'Bem-vindo ao FoodFight!',
-        description:
-            'Escolha o melhor lugar para comer com seus amigos e divirta-se!'),
+      image: 'assets/onboard/onboard1.jpg',
+      title: 'Bem-vindo ao Help Me Choose!',
+      description:
+          'Decida com seus amigos onde ir ou o que comer de forma fácil e divertida.',
+    ),
     OnboardingItem(
-        image: 'assets/onboard/onboard2.jpg',
-        title: 'Sugira e Vote!',
-        description:
-            'Adicione suas sugestões de restaurantes e vote na sua favorita.'),
+      image: 'assets/onboard/onboard2.jpg',
+      title: 'Sugira e Vote!',
+      description:
+          'Adicione suas sugestões e vote na sua favorita de forma anônima.',
+    ),
     OnboardingItem(
-        image: 'assets/onboard/onboard3.jpg',
-        title: 'Descubra o Vencedor!',
-        description:
-            'Veja em tempo real qual restaurante foi o mais votado pelo grupo.'),
+      image: 'assets/onboard/onboard3.jpg',
+      title: 'Descubra o Vencedor!',
+      description:
+          'Veja em tempo real qual opção foi a mais votada pelo grupo.',
+    ),
   ];
 
   void _nextPage() async {
@@ -40,11 +43,7 @@ class OnboardingScreenState extends State<OnboardingScreen> {
       );
       setState(() => _currentPage++);
     } else {
-      await OnboardingManager.setOnboardingShown();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-      );
+      await _completeOnboarding();
     }
   }
 
@@ -58,42 +57,54 @@ class OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  Future<void> _completeOnboarding() async {
+    await OnboardingManager.setOnboardingShown();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // Páginas do onboarding
           PageView.builder(
             controller: _pageController,
             itemCount: _onboardingItems.length,
             onPageChanged: (index) => setState(() => _currentPage = index),
             itemBuilder: (context, index) {
               final item = _onboardingItems[index];
-              return Image.asset(
-                item.image,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
+              return Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(item.image),
+                    fit: BoxFit.cover,
+                  ),
+                ),
               );
             },
           ),
 
-          // Gradiente escuro na parte inferior
+          // Overlay escuro para melhorar a legibilidade do texto
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.center,
-                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
                 ),
               ),
             ),
           ),
 
-          // Textos
+          // Conteúdo textual
           Positioned(
-            bottom: 120,
+            bottom: 160,
             left: 20,
             right: 20,
             child: Column(
@@ -120,6 +131,28 @@ class OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
+          // Indicadores de página
+          Positioned(
+            bottom: 120,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _onboardingItems.length,
+                (index) => Container(
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: _currentPage == index ? Colors.white : Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // Botões de navegação
           Positioned(
             bottom: 40,
@@ -131,22 +164,42 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                 if (_currentPage > 0)
                   NeuTextButton(
                     onPressed: _previousPage,
-                    text: const Text('Anterior'),
+                    text: const Text(
+                      'Anterior',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
                     buttonColor: Colors.white,
                     borderColor: Colors.black,
                     shadowColor: Colors.black,
                     enableAnimation: true,
+                    buttonHeight: 50,
+                    buttonWidth: 120,
                   ),
                 const Spacer(),
                 NeuTextButton(
                   onPressed: _nextPage,
-                  text: _currentPage == _onboardingItems.length - 1
-                      ? const Text('Começar')
-                      : const Text('Próximo'),
-                  buttonColor: Colors.white,
+                  text: Text(
+                    _currentPage == _onboardingItems.length - 1
+                        ? 'Começar'
+                        : 'Próximo',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  buttonColor: _currentPage == _onboardingItems.length - 1
+                      ? Colors.green
+                      : Colors.blue,
                   borderColor: Colors.black,
                   shadowColor: Colors.black,
                   enableAnimation: true,
+                  buttonHeight: 50,
+                  buttonWidth: 120,
                 ),
               ],
             ),
