@@ -71,40 +71,53 @@ class OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Páginas do onboarding
-          PageView.builder(
-            controller: _pageController,
-            itemCount: _onboardingItems.length,
-            onPageChanged: (index) => setState(() => _currentPage = index),
-            itemBuilder: (context, index) {
-              final item = _onboardingItems[index];
-              return Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(item.image),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            },
-          ),
-
-          // Overlay escuro para melhorar a legibilidade do texto
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.center,
-                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
-                ),
+          // Imagem de fundo dentro de um neucontainer
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 120),
+            child: NeuContainer(
+              borderRadius: BorderRadius.zero,
+              color: Colors.white,
+              borderWidth: 5,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _onboardingItems.length,
+                onPageChanged: (index) => setState(() => _currentPage = index),
+                itemBuilder: (context, index) {
+                  final item = _onboardingItems[index];
+                  return Stack(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(50),
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage(item.image),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.center,
+                              colors: [
+                                Colors.black.withOpacity(0.7),
+                                Colors.transparent
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
 
-          // Conteúdo textual
           Positioned(
-            bottom: 160,
+            bottom: 140,
             left: 20,
             right: 20,
             child: Column(
@@ -122,40 +135,16 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   _onboardingItems[_currentPage].description,
                   style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-
-          // Indicadores de página
           Positioned(
-            bottom: 120,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _onboardingItems.length,
-                (index) => Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                  decoration: BoxDecoration(
-                    color: _currentPage == index ? Colors.white : Colors.grey,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Botões de navegação
-          Positioned(
-            bottom: 40,
+            top: 50,
             left: 20,
             right: 20,
             child: Row(
@@ -179,7 +168,37 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                     buttonHeight: 50,
                     buttonWidth: 120,
                   ),
-                const Spacer(),
+              ],
+            ),
+          ),
+
+          // Botões de navegação
+          Positioned(
+            bottom: 40,
+            left: 20,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    ...List.generate(
+                      _onboardingItems.length,
+                      (index) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: NeuCard(
+                          cardBorderWidth: 2,
+                          cardColor: _currentPage == index
+                              ? Colors.white
+                              : Colors.grey,
+                          borderRadius: BorderRadius.circular(10),
+                          cardHeight: 20,
+                          cardWidth: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 NeuTextButton(
                   onPressed: _nextPage,
                   text: Text(
@@ -187,7 +206,7 @@ class OnboardingScreenState extends State<OnboardingScreen> {
                         ? 'Começar'
                         : 'Próximo',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
