@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:help_me_choose/utils/snackbar.dart';
 import 'package:neubrutalism_ui/neubrutalism_ui.dart';
 import 'ranking_screen.dart';
 
@@ -138,132 +139,141 @@ class VotingScreenState extends State<VotingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Votação',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          showBackToHomeAndDeleteSuggestions(context, widget.roomId);
+        }
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            NeuContainer(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Votos restantes: $_remainingVotes',
-                  style: const TextStyle(
+        appBar: AppBar(
+          title: const Text(
+            'Votação',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              NeuContainer(
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    'Votos restantes: $_remainingVotes',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _firestore
+                      .collection('rooms')
+                      .doc(widget.roomId)
+                      .collection('suggestions')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                        ),
+                      );
+                    }
+                    // ordena as sugestões por nome
+                    final suggestions = snapshot.data!.docs;
+
+                    suggestions
+                        .sort((a, b) => a['place'].compareTo(b['place']));
+
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: suggestions.map((suggestion) {
+                        final place = suggestion['place'];
+                        final isVoted = _userVotes.contains(place);
+                        final voteIndex = _userVotes.indexOf(place);
+
+                        return NeuContainer(
+                          width: MediaQuery.of(context).size.width / 2 - 30,
+                          borderColor: Colors.black,
+                          shadowColor: Colors.black,
+                          color: isVoted ? Colors.grey[100] : Colors.white,
+                          child: InkWell(
+                            onTap: () => vote(place),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (isVoted)
+                                    Icon(
+                                      Icons.emoji_events,
+                                      color: voteIndex == 0
+                                          ? Colors.amber
+                                          : voteIndex == 1
+                                              ? Colors.grey
+                                              : Colors.brown,
+                                      size: 24,
+                                    ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    place,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Botão para finalizar a votação
+              NeuTextButton(
+                onPressed: () => finishVoting(context),
+                text: const Text(
+                  'Finalizar Votação',
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
-                  textAlign: TextAlign.center,
                 ),
+                buttonColor: Colors.white,
+                borderColor: Colors.black,
+                shadowColor: Colors.black,
+                enableAnimation: true,
               ),
-            ),
-            const SizedBox(height: 20),
-
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _firestore
-                    .collection('rooms')
-                    .doc(widget.roomId)
-                    .collection('suggestions')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.black,
-                      ),
-                    );
-                  }
-                  // ordena as sugestões por nome
-                  final suggestions = snapshot.data!.docs;
-
-                  suggestions.sort((a, b) => a['place'].compareTo(b['place']));
-
-                  return Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: suggestions.map((suggestion) {
-                      final place = suggestion['place'];
-                      final isVoted = _userVotes.contains(place);
-                      final voteIndex = _userVotes.indexOf(place);
-
-                      return NeuContainer(
-                        width: MediaQuery.of(context).size.width / 2 - 30,
-                        borderColor: Colors.black,
-                        shadowColor: Colors.black,
-                        color: isVoted ? Colors.grey[100] : Colors.white,
-                        child: InkWell(
-                          onTap: () => vote(place),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (isVoted)
-                                  Icon(
-                                    Icons.emoji_events,
-                                    color: voteIndex == 0
-                                        ? Colors.amber
-                                        : voteIndex == 1
-                                            ? Colors.grey
-                                            : Colors.brown,
-                                    size: 24,
-                                  ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  place,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Botão para finalizar a votação
-            NeuTextButton(
-              onPressed: () => finishVoting(context),
-              text: const Text(
-                'Finalizar Votação',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              buttonColor: Colors.white,
-              borderColor: Colors.black,
-              shadowColor: Colors.black,
-              enableAnimation: true,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

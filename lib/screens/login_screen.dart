@@ -63,9 +63,10 @@ class LoginScreen extends StatelessWidget {
               NeuTextButton(
                 onPressed: () async {
                   await signInWithGoogle();
-                  Navigator.pushReplacement(
+                  Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const HomeScreen()),
+                    (route) => false,
                   );
                 },
                 text: const Text(
