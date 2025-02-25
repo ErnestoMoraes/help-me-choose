@@ -86,13 +86,14 @@ class RankingScreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(height: 10),
+
           // Lista horizontal de usuários aguardando
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('rooms')
                 .doc(roomId)
                 .collection('players')
-                .where('status', isEqualTo: 'waiting ranking')
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
@@ -101,9 +102,24 @@ class RankingScreen extends StatelessWidget {
 
               final players = snapshot.data!.docs;
 
+              players.sort((a, b) {
+                final statusA = a['status'];
+                final statusB = b['status'];
+
+                if (statusA == 'waiting ranking') {
+                  return -1;
+                }
+
+                if (statusB == 'waiting ranking') {
+                  return 1;
+                }
+
+                return 0;
+              });
+
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                height: 100,
+                height: 70,
                 child: ListView.builder(
                   shrinkWrap: true,
                   scrollDirection: Axis.horizontal,
@@ -111,15 +127,54 @@ class RankingScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final player = players[index];
                     final photoUrl = player['photoUrl'] ?? '';
+                    final status = player['status'];
 
                     return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: CircleAvatar(
-                        radius: 30,
-                        backgroundImage: photoUrl.isNotEmpty
-                            ? NetworkImage(photoUrl)
-                            : const AssetImage('assets/default_avatar.png')
-                                as ImageProvider,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: NeuContainer(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(70),
+                        width: 70,
+                        child: Stack(
+                          children: [
+                            if (photoUrl.isEmpty)
+                              Center(
+                                child: Text(
+                                  player['name'][0],
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              )
+                            else
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(70),
+                                child: Image.network(
+                                  photoUrl,
+                                  width: 70,
+                                  height: 70,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            if (status != 'waiting ranking')
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(70),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.access_time,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   },
