@@ -126,6 +126,26 @@ class WaitingRoomScreenState extends State<WaitingRoomScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          leading: Padding(
+            padding: const EdgeInsets.only(
+              left: 20,
+              top: 10,
+              bottom: 10,
+            ),
+            child: NeuIconButton(
+              onPressed: () => showBackToHomeAndDescribeRoom(context, _roomId),
+              borderColor: Colors.black,
+              shadowColor: Colors.black,
+              buttonColor: Colors.white,
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.black,
+                fill: 1,
+                weight: 800,
+              ),
+              enableAnimation: true,
+            ),
+          ),
           title: const Text(
             'Sala de Espera',
             style: TextStyle(
@@ -183,9 +203,13 @@ class WaitingRoomScreenState extends State<WaitingRoomScreen> {
                             },
                             borderColor: Colors.black,
                             shadowColor: Colors.black,
-                            buttonColor: Colors.white,
+                            buttonColor: Colors.blueGrey,
                             enableAnimation: true,
-                            icon: const Icon(Icons.copy, size: 20),
+                            icon: const Icon(
+                              Icons.copy,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       ),
@@ -193,6 +217,14 @@ class WaitingRoomScreenState extends State<WaitingRoomScreen> {
                   ),
                 ),
               ),
+            ),
+            const Text(
+              'Participantes',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -259,7 +291,7 @@ class WaitingRoomScreenState extends State<WaitingRoomScreen> {
                     color: Colors.black,
                   ),
                 ),
-                buttonColor: Colors.white,
+                buttonColor: Colors.greenAccent,
                 borderColor: Colors.black,
                 shadowColor: Colors.black,
                 enableAnimation: true,

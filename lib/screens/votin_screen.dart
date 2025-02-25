@@ -17,13 +17,12 @@ class VotingScreen extends StatefulWidget {
 class VotingScreenState extends State<VotingScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final Map<String, int> _votes = {}; // Contagem de votos por item
-  final List<String> _userVotes = []; // Itens votados pelo usuário (em ordem)
-  int _remainingVotes = 3; // Votos restantes do usuário
+  final Map<String, int> _votes = {};
+  final List<String> _userVotes = [];
+  int _remainingVotes = 3;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     changeStatusUser('votando');
   }
@@ -80,10 +79,13 @@ class VotingScreenState extends State<VotingScreen> {
   }
 
   void finishVoting(BuildContext context) async {
+    if (_remainingVotes != 0) {
+      showNeubrutalismSnackBar(context, 'Vote em 3 sugestões para continuar!');
+      return;
+    }
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // Atualiza os votos no Firestore
     final batch = _firestore.batch(); // Usa um batch para atualizações em lote
 
     for (final entry in _votes.entries) {
@@ -123,7 +125,6 @@ class VotingScreenState extends State<VotingScreen> {
         .doc(user.uid)
         .update({'status': 'waiting ranking'});
 
-    // Atualiza o estado da sala para "ranking"
     await _firestore.collection('rooms').doc(widget.roomId).update({
       'status': 'ranking',
     });
@@ -149,6 +150,27 @@ class VotingScreenState extends State<VotingScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          leading: Padding(
+            padding: const EdgeInsets.only(
+              left: 20,
+              top: 10,
+              bottom: 10,
+            ),
+            child: NeuIconButton(
+              onPressed: () =>
+                  showBackToHomeAndDeleteSuggestions(context, widget.roomId),
+              borderColor: Colors.black,
+              shadowColor: Colors.black,
+              buttonColor: Colors.white,
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.black,
+                fill: 1,
+                weight: 800,
+              ),
+              enableAnimation: true,
+            ),
+          ),
           title: const Text(
             'Votação',
             style: TextStyle(
@@ -267,7 +289,7 @@ class VotingScreenState extends State<VotingScreen> {
                     color: Colors.black,
                   ),
                 ),
-                buttonColor: Colors.white,
+                buttonColor: Colors.greenAccent,
                 borderColor: Colors.black,
                 shadowColor: Colors.black,
                 enableAnimation: true,

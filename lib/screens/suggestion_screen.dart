@@ -85,6 +85,27 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
+          leading: Padding(
+            padding: const EdgeInsets.only(
+              left: 20,
+              top: 10,
+              bottom: 10,
+            ),
+            child: NeuIconButton(
+              onPressed: () =>
+                  showBackToHomeAndDeleteSuggestions(context, widget.roomId),
+              borderColor: Colors.black,
+              shadowColor: Colors.black,
+              buttonColor: Colors.white,
+              icon: const Icon(
+                Icons.arrow_back,
+                color: Colors.black,
+                fill: 1,
+                weight: 800,
+              ),
+              enableAnimation: true,
+            ),
+          ),
           title: const Text(
             'Sugestões',
             style: TextStyle(
@@ -133,12 +154,9 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                     onPressed: addSuggestion,
                     borderColor: Colors.black,
                     shadowColor: Colors.black,
-                    buttonColor: Colors.greenAccent,
+                    buttonColor: Colors.white,
                     enableAnimation: true,
-                    icon: const Icon(
-                      Icons.add,
-                      color: Colors.black,
-                    ),
+                    icon: const Icon(Icons.add, color: Colors.black),
                   ),
                 ],
               ),
@@ -250,7 +268,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
                       color: Colors.black,
                     ),
                   ),
-                  buttonColor: Colors.white,
+                  buttonColor: Colors.greenAccent,
                   borderColor: Colors.black,
                   shadowColor: Colors.black,
                   enableAnimation: true,

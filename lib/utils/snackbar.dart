@@ -10,28 +10,17 @@ void showNeubrutalismSnackBar(
   Color backgroundColor = Colors.orangeAccent,
   Color textColor = Colors.black,
 }) {
-  final overlay = Overlay.of(context);
-  final overlayEntry = OverlayEntry(
-    builder: (context) => Positioned(
-      bottom: 20,
-      left: 20,
-      right: 20,
-      child: Material(
-        color: Colors.transparent,
-        child: NeuSnackBar(
-          message: message,
-          backgroundColor: backgroundColor,
-          textColor: textColor,
-        ),
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      backgroundColor: Colors.white,
+      content: NeuSnackBar(
+        message: message,
+        backgroundColor: backgroundColor,
+        textColor: textColor,
       ),
+      duration: const Duration(seconds: 4),
     ),
   );
-
-  overlay.insert(overlayEntry);
-
-  Future.delayed(const Duration(seconds: 5), () {
-    overlayEntry.remove();
-  });
 }
 
 class NeuSnackBar extends StatelessWidget {
